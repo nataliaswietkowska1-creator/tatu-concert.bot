@@ -1,4 +1,3 @@
-
 name: TATU Concert Monitor
 
 on:
@@ -21,8 +20,24 @@ jobs:
       - name: Install dependencies
         run: pip install requests beautifulsoup4
 
+      - name: Restore concert history
+        uses: actions/download-artifact@v4
+        with:
+          name: concert-history
+          path: .
+        continue-on-error: true
+
       - name: Check concerts
         run: python bot.py
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+
+      - name: Save concert history
+        uses: actions/upload-artifact@v4
+        with:
+          name: concert-history
+          path: seen.json
+          if-no-files-found: ignore
+          overwrite: true
+          retention-days: 90
