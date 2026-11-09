@@ -1,91 +1,33 @@
-import os
-import json
-import requests
-from bs4 import BeautifulSoup
 
-BOT_TOKEN = os.environ["BOT_TOKEN"]
-CHANNEL_ID = os.environ["CHANNEL_ID"]
+name: TATU Concert Monitor
 
-URL = "https://afisha.yandex.ru/artist/tatu"
-HISTORY_FILE = "seen.json"
+on:
+  schedule:
+    - cron: "17,47 * * * *"
+  workflow_dispatch:
 
-headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36"
-}
+permissions:
+  contents: read
 
-def main():
-    print("Sprawdzam koncerty T.A.T.u....")
+jobs:
+  check-concerts:
+    runs-on: ubuntu-latest
 
-    response = requests.get(URL, headers=headers, timeout=30)
-    response.raise_for_status()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    soup = BeautifulSoup(response.text, "html.parser")
-    events = {}
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-    for link in soup.select("a[href]"):
-        href = link.get("href", "")
-        name = link.get_text(" ", strip=True)
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
 
-        if not name:
-            continue
-
-        if "/concert/" in href or "/event/" in href:
-            if href.startswith("http"):
-                full_url = href
-            else:
-                full_url = "https://afisha.yandex.ru" + href
-
-            events[full_url] = name
-
-    print("Znalezione wydarzenia:", len(events))
-
-    if not events:
-        print("Nie znaleziono koncertów.")
-        print("Strona może ładować wydarzenia dynamicznie.")
-        return
-
-    try:
-        with open(HISTORY_FILE, "r", encoding="utf-8") as file:
-            seen = json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError):
-        seen = []
-
-    new_events = {
-        url: name
-        for url, name in events.items()
-        if url not in seen
-    }
-
-    if not seen:
-        print("Pierwsze uruchomienie. Zapisuję obecne koncerty.")
-    else:
-        for url, name in new_events.items():
-            message = (
-                "🎤 NOWY KONCERT T.A.T.u.!\n\n"
-                + name
-                + "\n\n"
-                + url
-            )
-
-            result = requests.post(
-                f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-                data={
-                    "chat_id": CHANNEL_ID,
-                    "text": message
-                },
-                timeout=20
-            )
-
-            result.raise_for_status()
-            print("Wysłano:", name)
-
-    all_seen = list(set(seen) | set(events.keys()))
-
-    with open(HISTORY_FILE, "w", encoding="utf-8") as file:
-        json.dump(all_seen, file, ensure_ascii=False)
-
-    print("Gotowe!")
-
-if __name__ == "__main__":
-    main()
-    
+      - name: Check concerts
+        run: python bot.py
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+          
