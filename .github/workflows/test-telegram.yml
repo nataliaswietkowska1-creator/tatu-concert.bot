@@ -1,0 +1,38 @@
+
+name: Telegram Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send test message
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+        run: |
+          python - <<'PY'
+          import os
+          import json
+          import urllib.request
+          import urllib.parse
+
+          data = urllib.parse.urlencode({
+              "chat_id": os.environ["CHANNEL_ID"],
+              "text": "🤖 Test bota t.A.T.u. — połączenie działa! ❤️"
+          }).encode()
+
+          url = "https://api.telegram.org/bot" + os.environ["BOT_TOKEN"] + "/sendMessage"
+          req = urllib.request.Request(url, data=data)
+
+          with urllib.request.urlopen(req) as response:
+              result = json.loads(response.read())
+
+          print(result)
+
+          if not result.get("ok"):
+              raise SystemExit("Wysyłanie nie powiodło się!")
+          PY
+          
