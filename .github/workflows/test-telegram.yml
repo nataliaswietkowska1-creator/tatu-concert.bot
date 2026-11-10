@@ -18,6 +18,7 @@ jobs:
           import json
           import urllib.request
           import urllib.parse
+          import urllib.error
 
           data = urllib.parse.urlencode({
               "chat_id": os.environ["CHANNEL_ID"],
@@ -27,12 +28,12 @@ jobs:
           url = "https://api.telegram.org/bot" + os.environ["BOT_TOKEN"] + "/sendMessage"
           req = urllib.request.Request(url, data=data)
 
-          with urllib.request.urlopen(req) as response:
-              result = json.loads(response.read())
-
-          print(result)
-
-          if not result.get("ok"):
-              raise SystemExit("Wysyłanie nie powiodło się!")
+          try:
+              with urllib.request.urlopen(req) as response:
+                  print(response.read().decode())
+          except urllib.error.HTTPError as e:
+              print("TELEGRAM ERROR:")
+              print(e.read().decode())
+              raise
           PY
           
